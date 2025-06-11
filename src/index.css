@@ -1,0 +1,409 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Cyberpunk Design System for Hacknet Mobile */
+
+@layer base {
+  :root {
+    /* Core Hacknet Colors */
+    --background: 0 0% 0%;
+    --foreground: 120 100% 50%;
+
+    --card: 0 0% 2%;
+    --card-foreground: 120 100% 50%;
+
+    --popover: 0 0% 0%;
+    --popover-foreground: 120 100% 50%;
+
+    --primary: 120 100% 50%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 180 100% 50%;
+    --secondary-foreground: 0 0% 0%;
+
+    --muted: 0 0% 20%;
+    --muted-foreground: 120 100% 25%;
+
+    --accent: 60 100% 50%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 120 100% 25%;
+    --input: 120 100% 25%;
+    --ring: 120 100% 50%;
+
+    --radius: 0.25rem;
+
+    --sidebar-background: 0 0% 2%;
+    --sidebar-foreground: 120 100% 50%;
+    --sidebar-primary: 120 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 5%;
+    --sidebar-accent-foreground: 120 100% 50%;
+    --sidebar-border: 120 100% 15%;
+    --sidebar-ring: 120 100% 50%;
+
+    /* Cyberpunk specific variables */
+    --matrix-green: 120 100% 50%;
+    --matrix-cyan: 180 100% 50%;
+    --matrix-yellow: 60 100% 50%;
+    --matrix-red: 0 100% 50%;
+    --matrix-orange: 39 100% 50%;
+    --matrix-gray: 0 0% 50%;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 120 100% 50%;
+
+    --card: 0 0% 2%;
+    --card-foreground: 120 100% 50%;
+
+    --popover: 0 0% 0%;
+    --popover-foreground: 120 100% 50%;
+
+    --primary: 120 100% 50%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 180 100% 50%;
+    --secondary-foreground: 0 0% 0%;
+
+    --muted: 0 0% 10%;
+    --muted-foreground: 120 100% 30%;
+
+    --accent: 60 100% 50%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 120 100% 15%;
+    --input: 120 100% 15%;
+    --ring: 120 100% 50%;
+
+    --sidebar-background: 0 0% 2%;
+    --sidebar-foreground: 120 100% 50%;
+    --sidebar-primary: 120 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 5%;
+    --sidebar-accent-foreground: 120 100% 50%;
+    --sidebar-border: 120 100% 10%;
+    --sidebar-ring: 120 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-mono;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    background: linear-gradient(135deg, #000000 0%, #001100 50%, #000000 100%);
+    background-attachment: fixed;
+  }
+
+  /* Terminal cursor animation */
+  .terminal-cursor {
+    animation: cursor-blink 1s infinite;
+  }
+
+  /* Matrix rain effect background */
+  .matrix-bg::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      linear-gradient(90deg, transparent 98%, rgba(0, 255, 65, 0.1) 100%),
+      linear-gradient(180deg, transparent 98%, rgba(0, 255, 65, 0.05) 100%);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Glitch text effect */
+  .glitch-text {
+    position: relative;
+    animation: glitch 3s infinite;
+  }
+
+  .glitch-text::before,
+  .glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .glitch-text::before {
+    animation: glitch-1 0.5s infinite;
+    color: #ff0000;
+    z-index: -1;
+  }
+
+  .glitch-text::after {
+    animation: glitch-2 0.5s infinite;
+    color: #00ffff;
+    z-index: -2;
+  }
+
+  @keyframes glitch-1 {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+  }
+
+  @keyframes glitch-2 {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(2px, 0); }
+    40% { transform: translate(-2px, 0); }
+    60% { transform: translate(0, 2px); }
+    80% { transform: translate(0, -2px); }
+  }
+
+  /* Scrollbar styling for cyberpunk theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(0, 255, 65, 0.3);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #00FF41 0%, #00AA2B 100%);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #00FFFF 0%, #0099CC 100%);
+  }
+
+  /* Selection color */
+  ::selection {
+    background: rgba(0, 255, 65, 0.3);
+    color: #FFFFFF;
+  }
+
+  /* Remove default focus outlines and add cyberpunk ones */
+  button:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.8);
+  }
+
+  /* Cyberpunk button hover effects */
+  .cyber-btn {
+    background: transparent;
+    border: 1px solid #00FF41;
+    color: #00FF41;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cyber-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), transparent);
+    transition: left 0.5s;
+  }
+
+  .cyber-btn:hover::before {
+    left: 100%;
+  }
+
+  .cyber-btn:hover {
+    background: rgba(0, 255, 65, 0.1);
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+    text-shadow: 0 0 10px #00FF41;
+  }
+
+  /* Loading animation for hacking processes */
+  .hack-loader {
+    display: inline-block;
+    position: relative;
+    width: 20px;
+    height: 20px;
+  }
+
+  .hack-loader::after {
+    content: " ";
+    display: block;
+    width: 16px;
+    height: 16px;
+    margin: 2px;
+    border-radius: 50%;
+    border: 2px solid #00FF41;
+    border-color: #00FF41 transparent #00FF41 transparent;
+    animation: hack-loader-spin 1.2s linear infinite;
+  }
+
+  @keyframes hack-loader-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Typing animation for command output */
+  .typing-effect {
+    overflow: hidden;
+    border-right: 2px solid #00FF41;
+    white-space: nowrap;
+    animation: typing 2s steps(40, end), cursor-blink 1s step-end infinite;
+  }
+
+  @keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+
+  /* Responsive design for mobile */
+  @media (max-width: 768px) {
+    body {
+      font-size: 14px;
+    }
+    
+    .glitch-text {
+      font-size: 1.2rem;
+    }
+    
+    /* Optimize touch targets for mobile */
+    button, .clickable {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    body {
+      background: #000000;
+    }
+    
+    .glitch-text {
+      animation: none;
+      text-shadow: none;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Terminal specific styles */
+.terminal-line {
+  font-family: 'Space Mono', 'Monaco', 'Lucida Console', monospace;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.terminal-input {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+  width: 100%;
+  caret-color: #00FF41;
+}
+
+/* Network map styles */
+.network-node {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+.network-node:hover {
+  filter: drop-shadow(0 0 8px currentColor) brightness(1.2);
+  transform: scale(1.1);
+}
+
+/* File system styles */
+.file-item {
+  font-family: 'Space Mono', monospace;
+  transition: all 0.2s ease;
+}
+
+.file-item:hover {
+  background: rgba(0, 255, 65, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.3);
+}
+
+/* Mission panel styles */
+.mission-item {
+  background: linear-gradient(135deg, rgba(0, 255, 65, 0.05) 0%, rgba(0, 0, 0, 0.8) 100%);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.mission-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.mission-item:hover::before {
+  left: 100%;
+}
+
+/* Utility classes for cyberpunk effects */
+.neon-glow {
+  text-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
+}
+
+.cyber-border {
+  border: 1px solid #00FF41;
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.1);
+}
+
+.hack-pulse {
+  animation: hack-pulse 2s ease-in-out infinite;
+}
+
+.matrix-text {
+  color: #00FF41;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.danger-text {
+  color: #FF0000;
+  animation: trace-warning 1s ease-in-out infinite;
+}
