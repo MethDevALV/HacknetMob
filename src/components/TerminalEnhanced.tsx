@@ -1,17 +1,12 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { useGameStateEnhanced } from '../hooks/useGameStateEnhanced';
-import { CommandProcessorEnhanced } from '../utils/CommandProcessorEnhanced';
+import { useGameState } from '../hooks/useGameState';
+import { hackNetEngine } from '../core/HackNetEngine';
 import { TerminalInput, TerminalInputRef } from './terminal/TerminalInput';
 import { TerminalOutput } from './terminal/TerminalOutput';
 import { QuickCommands } from './terminal/QuickCommands';
 import { gameCore } from '../core/GameCore';
-
-interface TerminalLine {
-  id: string;
-  type: 'input' | 'output' | 'error' | 'system' | 'warning';
-  content: string;
-  timestamp: Date;
-}
+import { TerminalLine } from '../types/CoreTypes';
 
 export const TerminalEnhanced: React.FC = () => {
   const [lines, setLines] = useState<TerminalLine[]>([]);
@@ -21,80 +16,60 @@ export const TerminalEnhanced: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const { gameState, updateGameState } = useGameStateEnhanced();
+  const { gameState, updateGameState } = useGameState();
   const terminalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<TerminalInputRef>(null);
-  const commandProcessorRef = useRef<CommandProcessorEnhanced | null>(null);
 
-  // Initialize command processor only once
+  // Initialize terminal
   useEffect(() => {
-    if (!commandProcessorRef.current) {
-      commandProcessorRef.current = new CommandProcessorEnhanced();
-      
-      commandProcessorRef.current.setGameStateFunctions(
-        updateGameState, 
-        (device: any) => {}, 
-        gameState
-      );
-      
-      if (lines.length === 0) {
-        const initialLines: TerminalLine[] = [
-          {
-            id: Date.now().toString() + '_1',
-            type: 'system',
-            content: '█▓▒░ HackNet Terminal v3.0.0 ░▒▓█',
-            timestamp: new Date()
-          },
-          {
-            id: Date.now().toString() + '_2',
-            type: 'system',
-            content: `═══ Connected to ${gameState.currentNode || 'localhost'} ═══`,
-            timestamp: new Date()
-          },
-          {
-            id: Date.now().toString() + '_3',
-            type: 'output',
-            content: 'Welcome to HackNet. Your journey begins now.',
-            timestamp: new Date()
-          },
-          {
-            id: Date.now().toString() + '_4',
-            type: 'output',
-            content: 'Type "help" for available commands or "scan" to discover targets.',
-            timestamp: new Date()
-          },
-          {
-            id: Date.now().toString() + '_5',
-            type: 'output',
-            content: '',
-            timestamp: new Date()
-          }
-        ];
-        setLines(initialLines);
-      }
+    if (lines.length === 0) {
+      const initialLines: TerminalLine[] = [
+        {
+          id: Date.now().toString() + '_1',
+          type: 'system',
+          content: '█▓▒░ HackNet Terminal v3.0.0 ░▒▓█',
+          timestamp: new Date()
+        },
+        {
+          id: Date.now().toString() + '_2',
+          type: 'system',
+          content: `═══ Connected to ${gameState.currentNode || 'localhost'} ═══`,
+          timestamp: new Date()
+        },
+        {
+          id: Date.now().toString() + '_3',
+          type: 'output',
+          content: 'Welcome to HackNet. Your journey begins now.',
+          timestamp: new Date()
+        },
+        {
+          id: Date.now().toString() + '_4',
+          type: 'output',
+          content: 'Type "help" for available commands or "scan" to discover targets.',
+          timestamp: new Date()
+        },
+        {
+          id: Date.now().toString() + '_5',
+          type: 'output',
+          content: '',
+          timestamp: new Date()
+        }
+      ];
+      setLines(initialLines);
     }
-  }, []);
+  }, [gameState.currentNode]);
 
-  // Update command processor when game state changes
+  // Initialize HackNet engine
   useEffect(() => {
-    if (commandProcessorRef.current) {
-      commandProcessorRef.current.setGameStateFunctions(
-        updateGameState, 
-        (device: any) => {}, 
-        gameState
-      );
-    }
+    hackNetEngine.initialize(gameState, updateGameState);
   }, [gameState, updateGameState]);
 
-  // Suscribirse a eventos del GameCore
   useEffect(() => {
     const handleNetworkUpdate = () => {
-      // Refrescar automáticamente cuando haya cambios en la red
       console.log('[TerminalEnhanced] Network updated - refreshing display');
     };
 
     const handleFileSystemChange = () => {
-      // Refrescar cuando cambien los archivos
       console.log('[TerminalEnhanced] File system changed - refreshing display');
     };
 
@@ -113,15 +88,16 @@ export const TerminalEnhanced: React.FC = () => {
     }
   }, [lines]);
 
-  // Enhanced autocompletion with file and command suggestions
+  // Enhanced autocompletion
   useEffect(() => {
-    if (currentInput.trim() && commandProcessorRef.current) {
+    if (currentInput.trim()) {
       const parts = currentInput.split(' ');
       const lastPart = parts[parts.length - 1];
       
       if (lastPart.length > 0) {
-        const suggestions = commandProcessorRef.current.getCommandSuggestions(lastPart);
-        setSuggestions(suggestions.slice(0, 8));
+        const commands = ['help', 'scan', 'probe', 'connect', 'ls', 'cat', 'rm', 'cd', 'pwd', 'ps', 'kill', 'sshcrack', 'disconnect', 'netmap'];
+        const suggestions = commands.filter(cmd => cmd.startsWith(lastPart)).slice(0, 8);
+        setSuggestions(suggestions);
         setShowSuggestions(suggestions.length > 0);
       } else {
         setSuggestions([]);
@@ -171,27 +147,24 @@ export const TerminalEnhanced: React.FC = () => {
       }
 
       console.log('[TerminalEnhanced] Processing command:', command);
-      if (commandProcessorRef.current) {
-        const result = await commandProcessorRef.current.processCommand(command);
-        
-        result.forEach(line => {
-          if (line.trim() || result.indexOf(line) === result.length - 1) {
-            // Determine line type based on content
-            let lineType: TerminalLine['type'] = 'output';
-            if (line.includes('Error:') || line.includes('failed') || line.includes('denied')) {
-              lineType = 'error';
-            } else if (line.includes('Warning:') || line.includes('detected') || line.includes('Trace')) {
-              lineType = 'warning';
-            } else if (line.includes('███') || line.includes('═══')) {
-              lineType = 'system';
-            }
-            
-            addLine(lineType, line);
+      const result = await hackNetEngine.executeCommand(command);
+      
+      result.forEach(line => {
+        if (line.trim() || result.indexOf(line) === result.length - 1) {
+          let lineType: TerminalLine['type'] = 'output';
+          if (line.includes('Error:') || line.includes('failed') || line.includes('denied')) {
+            lineType = 'error';
+          } else if (line.includes('Warning:') || line.includes('detected') || line.includes('Trace')) {
+            lineType = 'warning';
+          } else if (line.includes('███') || line.includes('═══')) {
+            lineType = 'system';
+          } else if (line.includes('Success') || line.includes('completed')) {
+            lineType = 'success';
           }
-        });
-      } else {
-        addLine('error', 'Terminal not properly initialized');
-      }
+          
+          addLine(lineType, line);
+        }
+      });
     } catch (error) {
       console.error('[TerminalEnhanced] Command error:', error);
       addLine('error', `Error: ${error}`);
@@ -330,5 +303,3 @@ export const TerminalEnhanced: React.FC = () => {
     </div>
   );
 };
-
-export default TerminalEnhanced;

@@ -1,71 +1,87 @@
 
-import { networkSystemEnhanced } from '../../systems/NetworkSystemEnhanced';
-import { intrusionDetectionSystem } from '../../systems/IntrusionDetectionSystem';
-import { gameCore } from '../../core/GameCore';
+import { GameState, NetworkNode } from '../../types/CoreTypes';
+import { hackNetEngine } from '../../core/HackNetEngine';
 
 export class TerminalCore {
-  private currentNode: string = '127.0.0.1';
-  private currentDirectory: string = '/home/user';
-  private gameStateUpdater: ((updates: any) => void) | null = null;
-  private gameState: any = null;
+  private static instance: TerminalCore;
+  private gameState: GameState | null = null;
+  private updateGameState: ((updates: Partial<GameState>) => void) | null = null;
+  private discoverDeviceCallback: ((device: NetworkNode) => void) | null = null;
 
-  setGameState(gameState: any, updateGameState: (updates: any) => void) {
+  private constructor() {}
+
+  static getInstance(): TerminalCore {
+    if (!TerminalCore.instance) {
+      TerminalCore.instance = new TerminalCore();
+    }
+    return TerminalCore.instance;
+  }
+
+  setGameStateFunctions(
+    updateGameState: (updates: Partial<GameState>) => void,
+    discoverDevice: (device: NetworkNode) => void,
+    gameState: GameState
+  ) {
+    this.updateGameState = updateGameState;
+    this.discoverDeviceCallback = discoverDevice;
     this.gameState = gameState;
-    this.gameStateUpdater = updateGameState;
     
-    // Configurar GameCore con el estado del juego
-    gameCore.setGameState(gameState, updateGameState);
-    
-    // Initialize with localhost if no current node set
-    this.currentNode = gameState.currentNode || '127.0.0.1';
-    this.currentDirectory = gameState.currentDirectory || '/home/user';
-    
-    // Set up intrusion detection system
-    intrusionDetectionSystem.setGameStateUpdater(updateGameState);
-    
-    // Set up network system
-    networkSystemEnhanced.setGameStateUpdater(updateGameState);
-    
-    console.log(`[TerminalCore] Initialized: ${this.currentNode}:${this.currentDirectory}`);
+    // Initialize HackNet engine with current game state
+    hackNetEngine.initialize(gameState, updateGameState);
   }
 
-  getCurrentNode(): string {
-    return this.currentNode;
-  }
-
-  getCurrentDirectory(): string {
-    return this.currentDirectory;
-  }
-
-  setCurrentNode(node: string) {
-    this.currentNode = node;
-    if (this.gameStateUpdater) {
-      this.gameStateUpdater({ currentNode: node });
-    }
-    console.log(`[TerminalCore] Current node set to: ${node}`);
-  }
-
-  setCurrentDirectory(directory: string) {
-    this.currentDirectory = directory;
-    if (this.gameStateUpdater) {
-      this.gameStateUpdater({ currentDirectory: directory });
-    }
-    console.log(`[TerminalCore] Current directory set to: ${directory}`);
-  }
-
-  getGameState(): any {
+  getGameState(): GameState | null {
     return this.gameState;
   }
 
-  getGameStateUpdater(): ((updates: any) => void) | null {
-    return this.gameStateUpdater;
+  getGameStateUpdater(): ((updates: Partial<GameState>) => void) | null {
+    return this.updateGameState;
   }
 
-  getCurrentPrompt(): string {
-    const node = networkSystemEnhanced.getNode(this.currentNode);
-    const hostname = node ? node.hostname : this.currentNode;
-    return `${hostname}:${this.currentDirectory}$`;
+  getCurrentNode(): string {
+    return this.gameState?.currentNode || 'localhost';
+  }
+
+  getCurrentDirectory(): string {
+    return this.gameState?.currentDirectory || '/home/user';
+  }
+
+  getDiscoveredDevices(): NetworkNode[] {
+    return this.gameState?.discoveredDevices || [];
+  }
+
+  discoverDevice(device: NetworkNode) {
+    if (this.discoverDeviceCallback) {
+      this.discoverDeviceCallback(device);
+    }
+  }
+
+  setCurrentNode(nodeIp: string) {
+    if (this.updateGameState) {
+      this.updateGameState({ currentNode: nodeIp });
+    }
+  }
+
+  setCurrentDirectory(directory: string) {
+    if (this.updateGameState) {
+      this.updateGameState({ currentDirectory: directory });
+    }
+  }
+
+  updateScannedNodes(nodes: string[]) {
+    if (this.updateGameState) {
+      this.updateGameState({ scannedNodes: nodes });
+    }
+  }
+
+  async processCommand(commandString: string): Promise<string[]> {
+    if (!this.gameState || !this.updateGameState) {
+      return ['Error: Terminal not initialized.'];
+    }
+
+    // Use the unified HackNet engine to process all commands
+    return await hackNetEngine.executeCommand(commandString);
   }
 }
 
-export const terminalCore = new TerminalCore();
+export const terminalCore = TerminalCore.getInstance();

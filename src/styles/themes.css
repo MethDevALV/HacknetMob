@@ -1,0 +1,346 @@
+
+/* Base theme variables */
+:root {
+  --theme-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --theme-animation-speed: 0.3s;
+}
+
+/* Terminal Classic Theme Effects */
+.theme-terminal-classic {
+  --glow-color: var(--theme-primary);
+}
+
+.theme-terminal-classic .terminal-glow {
+  text-shadow: 0 0 5px var(--glow-color), 0 0 10px var(--glow-color), 0 0 15px var(--glow-color);
+  animation: terminal-flicker 2s infinite alternate;
+}
+
+.theme-terminal-classic .ascii-border {
+  position: relative;
+}
+
+.theme-terminal-classic .ascii-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 1px solid var(--theme-border);
+  border-style: dashed;
+  opacity: 0.5;
+}
+
+@keyframes terminal-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Cyberpunk Neon Theme Effects */
+.theme-cyberpunk-neon {
+  --neon-primary: var(--theme-primary);
+  --neon-secondary: var(--theme-secondary);
+}
+
+.theme-cyberpunk-neon .neon-glow {
+  box-shadow: 
+    0 0 5px var(--neon-primary),
+    0 0 10px var(--neon-primary),
+    0 0 20px var(--neon-primary),
+    0 0 40px var(--neon-primary);
+  text-shadow: 0 0 10px var(--neon-primary);
+}
+
+.theme-cyberpunk-neon .neon-glow-hover {
+  transition: var(--theme-transition);
+}
+
+.theme-cyberpunk-neon .neon-glow-hover:hover {
+  box-shadow: 
+    0 0 10px var(--neon-secondary),
+    0 0 20px var(--neon-secondary),
+    0 0 30px var(--neon-secondary);
+}
+
+.theme-cyberpunk-neon .glitch {
+  position: relative;
+  animation: glitch 2s infinite;
+}
+
+.theme-cyberpunk-neon .glitch::before,
+.theme-cyberpunk-neon .glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.theme-cyberpunk-neon .glitch::before {
+  animation: glitch-1 0.5s infinite;
+  color: var(--neon-secondary);
+  z-index: -1;
+}
+
+.theme-cyberpunk-neon .glitch::after {
+  animation: glitch-2 0.5s infinite;
+  color: var(--theme-accent);
+  z-index: -2;
+}
+
+@keyframes glitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+@keyframes glitch-1 {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-1px, 1px); }
+  40% { transform: translate(-1px, -1px); }
+  60% { transform: translate(1px, 1px); }
+  80% { transform: translate(1px, -1px); }
+}
+
+@keyframes glitch-2 {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(1px, -1px); }
+  40% { transform: translate(1px, 1px); }
+  60% { transform: translate(-1px, -1px); }
+  80% { transform: translate(-1px, 1px); }
+}
+
+/* Matrix Code Theme Effects */
+.theme-matrix-code {
+  --matrix-green: var(--theme-primary);
+}
+
+.theme-matrix-code .matrix-glow {
+  text-shadow: 0 0 10px var(--matrix-green);
+  box-shadow: 0 0 20px var(--matrix-green);
+}
+
+.theme-matrix-code .matrix-dissolve {
+  transition: all 0.3s ease;
+}
+
+.theme-matrix-code .matrix-dissolve:hover {
+  animation: matrix-dissolve 0.5s ease-in-out;
+}
+
+@keyframes matrix-dissolve {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.theme-matrix-code::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(0, 255, 65, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0, 255, 65, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(0, 255, 65, 0.1) 0%, transparent 50%);
+  animation: matrix-bg 10s infinite linear;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes matrix-bg {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Holographic Theme Effects */
+.theme-holographic {
+  --holo-blue: var(--theme-primary);
+  --holo-light: var(--theme-accent);
+}
+
+.theme-holographic .holographic-glow {
+  background: linear-gradient(135deg, 
+    rgba(77, 200, 255, 0.2) 0%, 
+    rgba(179, 224, 255, 0.2) 50%, 
+    rgba(77, 200, 255, 0.2) 100%);
+  box-shadow: 
+    0 4px 20px rgba(77, 200, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(77, 200, 255, 0.3);
+}
+
+.theme-holographic .holographic-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-holographic .holographic-shine::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: holographic-shine 3s infinite;
+}
+
+.theme-holographic .holographic-float {
+  animation: holographic-float 3s ease-in-out infinite;
+}
+
+@keyframes holographic-shine {
+  0% { transform: translateX(-100%) translateY(-100%); }
+  100% { transform: translateX(100%) translateY(100%); }
+}
+
+@keyframes holographic-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Hacker Minimal Theme Effects */
+.theme-hacker-minimal {
+  --minimal-shadow: rgba(0, 102, 204, 0.1);
+}
+
+.theme-hacker-minimal .minimal-card {
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--theme-border-radius);
+  box-shadow: 0 4px 20px var(--minimal-shadow);
+  backdrop-filter: blur(10px);
+}
+
+.theme-hacker-minimal .minimal-hover {
+  transition: all 0.2s ease;
+}
+
+.theme-hacker-minimal .minimal-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px var(--minimal-shadow);
+}
+
+/* Responsive adaptations */
+@media (max-width: 768px) {
+  .theme-cyberpunk-neon .neon-glow {
+    box-shadow: 
+      0 0 3px var(--neon-primary),
+      0 0 6px var(--neon-primary),
+      0 0 12px var(--neon-primary);
+  }
+  
+  .theme-holographic .holographic-glow {
+    box-shadow: 
+      0 2px 10px rgba(77, 200, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Universal animations */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.5s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.5s ease-out;
+}
+
+.slide-in-up {
+  animation: slideInUp 0.5s ease-out;
+}
+
+.slide-in-down {
+  animation: slideInDown 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Particle effects */
+.particles {
+  position: relative;
+  overflow: hidden;
+}
+
+.particles::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20px 30px, var(--theme-primary), transparent),
+    radial-gradient(2px 2px at 40px 70px, var(--theme-secondary), transparent),
+    radial-gradient(1px 1px at 90px 40px, var(--theme-accent), transparent);
+  background-repeat: repeat;
+  background-size: 200px 100px;
+  animation: particles 20s infinite linear;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+@keyframes particles {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-200px); }
+}
+
+/* Safe areas for mobile */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
+}

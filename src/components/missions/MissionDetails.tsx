@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Mission } from '../../utils/missions/MissionData';
+import { Mission } from '../../types/CoreTypes';
 
 interface MissionDetailsProps {
   mission: Mission;
@@ -28,12 +28,12 @@ export const MissionDetails: React.FC<MissionDetailsProps> = ({
         {mission.briefing}
       </div>
       <div className="text-sm mb-3 p-2 bg-black bg-opacity-30 border border-yellow-400">
-        <strong className="text-yellow-400">Objective:</strong> {mission.objective}
+        <strong className="text-yellow-400">Objective:</strong> {mission.objectives?.[0] || mission.description}
       </div>
       
-      {mission.prerequisites && (
+      {mission.objectives && mission.objectives.length > 1 && (
         <div className="text-xs mb-3 text-matrix-green/70">
-          Prerequisites: {mission.prerequisites.join(', ')}
+          Additional objectives: {mission.objectives.slice(1).join(', ')}
         </div>
       )}
 

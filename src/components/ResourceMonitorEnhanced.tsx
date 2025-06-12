@@ -1,160 +1,152 @@
 
 import React, { useState, useEffect } from 'react';
-import { useGameState } from '../hooks/useGameState';
-import { systemResourceManager, SystemResources } from '../utils/SystemResources';
-import { t } from '../utils/i18n';
-import { Cpu, HardDrive, Wifi, Thermometer, Zap, Activity } from 'lucide-react';
+import { Cpu, HardDrive, Activity, Thermometer, Zap } from 'lucide-react';
+import { systemResourcesEnhanced } from '../utils/SystemResourcesEnhanced';
+import { ResourceStats, ProcessInfo } from '../types/CoreTypes';
 
 export const ResourceMonitorEnhanced: React.FC = () => {
-  const { gameState } = useGameState();
-  const [resources, setResources] = useState<SystemResources>({
-    cpu: { current: 5, max: 100, unit: '%' },
-    ram: { current: 1200, max: 8192, unit: 'MB' },
-    network: { current: 0, max: 1000, unit: 'Mbps' },
-    storage: { current: 2500, max: 500000, unit: 'MB' },
-    temperature: { current: 35, max: 85, unit: '°C' }
+  const [resources, setResources] = useState<ResourceStats>({
+    cpu: { current: 0, max: 100 },
+    ram: { current: 0, max: 8192 },
+    memory: { current: 0, max: 8192 },
+    network: { current: 0, max: 1000 },
+    temperature: { current: 35, max: 85 },
+    activeProcesses: 0
   });
-  const [processes, setProcesses] = useState<any[]>([]);
+  const [processes, setProcesses] = useState<ProcessInfo[]>([]);
 
   useEffect(() => {
-    const updateResources = (newResources: SystemResources) => {
-      setResources(newResources);
+    const updateData = () => {
+      setResources(systemResourcesEnhanced.getResources());
+      setProcesses(systemResourcesEnhanced.getAllProcesses());
     };
 
-    systemResourceManager.onResourceChange(updateResources);
+    updateData();
+    const unsubscribe = systemResourcesEnhanced.onResourceChange(updateData);
     
-    // Update processes periodically
-    const processInterval = setInterval(() => {
-      setProcesses(systemResourceManager.getAllProcesses());
-    }, 1000);
-
-    return () => {
-      systemResourceManager.removeResourceCallback(updateResources);
-      clearInterval(processInterval);
-    };
+    return unsubscribe;
   }, []);
 
-  const getResourcePercentage = (resource: { current: number; max: number }) => {
-    return Math.min((resource.current / resource.max) * 100, 100);
+  const getPercentage = (current: number, max: number): number => {
+    return Math.min((current / max) * 100, 100);
   };
 
-  const getResourceColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-orange-500';
-    if (percentage >= 50) return 'bg-yellow-400';
-    return 'bg-matrix-green';
+  const getStatusColor = (percentage: number): string => {
+    if (percentage < 30) return 'text-green-400 border-green-400';
+    if (percentage < 70) return 'text-yellow-400 border-yellow-400';
+    return 'text-red-400 border-red-400';
   };
 
-  const getTraceColor = () => {
-    if (gameState.traceLevel >= 80) return 'text-red-500';
-    if (gameState.traceLevel >= 50) return 'text-orange-500';
-    if (gameState.traceLevel >= 25) return 'text-yellow-400';
-    return 'text-matrix-green';
+  const formatBytes = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   };
 
-  const formatBytes = (bytes: number) => {
-    if (bytes >= 1024) {
-      return `${(bytes / 1024).toFixed(1)}GB`;
-    }
-    return `${bytes}MB`;
-  };
-
-  const ResourceBar: React.FC<{
-    label: string;
-    resource: { current: number; max: number; unit: string };
-    icon: React.ReactNode;
-    warning?: boolean;
-  }> = ({ label, resource, icon, warning }) => {
-    const percentage = getResourcePercentage(resource);
-    const color = getResourceColor(percentage);
-
+  const ResourceBar: React.FC<{ 
+    icon: React.ReactNode; 
+    label: string; 
+    current: number; 
+    max: number; 
+    unit?: string;
+  }> = ({ icon, label, current, max, unit = '' }) => {
+    const percentage = getPercentage(current, max);
+    const colorClass = getStatusColor(percentage);
+    
     return (
-      <div className="flex items-center gap-1 text-xs">
-        <div className="flex items-center gap-1 w-10">
-          {icon}
-          <span className="text-matrix-cyan">{label}:</span>
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            {icon}
+            <span className="text-sm font-medium text-gray-300">{label}</span>
+          </div>
+          <span className={`text-sm font-mono ${colorClass.split(' ')[0]}`}>
+            {current.toFixed(1)}{unit}
+          </span>
         </div>
-        <div className="flex-1 h-1.5 bg-gray-800 border border-matrix-green/30 rounded overflow-hidden">
+        <div className="w-full bg-gray-700 rounded-full h-2">
           <div 
-            className={`h-full transition-all duration-300 ${color} ${warning ? 'animate-pulse' : ''}`}
+            className={`h-2 rounded-full transition-all duration-300 ${colorClass.includes('green') ? 'bg-green-400' : colorClass.includes('yellow') ? 'bg-yellow-400' : 'bg-red-400'}`}
             style={{ width: `${percentage}%` }}
           />
         </div>
-        <span className="text-matrix-green w-12 text-right">
-          {resource.unit === 'MB' ? formatBytes(resource.current) : `${resource.current.toFixed(1)}${resource.unit}`}
-        </span>
       </div>
     );
   };
 
-  const runningProcesses = processes.filter(p => p.duration && 
-    (Date.now() - p.startTime) / 1000 < p.duration
-  );
-
   return (
-    <div className="bg-black/80 border border-matrix-green/30 rounded p-2 backdrop-blur-sm">
+    <div className="h-full flex flex-col p-4 border rounded-lg" style={{
+      backgroundColor: 'var(--theme-surface)',
+      borderColor: 'var(--theme-border)',
+      color: 'var(--theme-text)'
+    }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-matrix-cyan font-bold text-xs">SYSTEM</h3>
-        <div className="flex items-center gap-1">
-          <Activity size={10} className="text-matrix-green" />
-          <span className="text-xs text-matrix-green">
-            {runningProcesses.length}
+      <div className="mb-4 pb-2 border-b" style={{ borderColor: 'var(--theme-border)' }}>
+        <h3 className="cyber-heading text-lg">SYSTEM RESOURCES</h3>
+      </div>
+
+      {/* Resource Bars */}
+      <div className="flex-1 space-y-4">
+        <ResourceBar
+          icon={<Cpu className="w-4 h-4 text-cyan-400" />}
+          label="CPU Usage"
+          current={resources.cpu.current}
+          max={resources.cpu.max}
+          unit="%"
+        />
+        
+        <ResourceBar
+          icon={<HardDrive className="w-4 h-4 text-cyan-400" />}
+          label="RAM Usage"
+          current={resources.ram.current}
+          max={resources.ram.max}
+          unit="MB"
+        />
+        
+        <ResourceBar
+          icon={<Activity className="w-4 h-4 text-cyan-400" />}
+          label="Network"
+          current={resources.network.current}
+          max={resources.network.max}
+          unit="kb/s"
+        />
+        
+        <ResourceBar
+          icon={<Thermometer className="w-4 h-4 text-cyan-400" />}
+          label="Temperature"
+          current={resources.temperature.current}
+          max={resources.temperature.max}
+          unit="°C"
+        />
+
+        {/* Process Count */}
+        <div className="flex items-center justify-between p-2 border rounded" style={{ borderColor: 'var(--theme-border)' }}>
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-cyan-400" />
+            <span className="text-sm text-gray-300">Active Processes</span>
+          </div>
+          <span className="text-sm font-mono text-cyan-400">
+            {resources.activeProcesses}
           </span>
         </div>
-      </div>
 
-      {/* Resource bars */}
-      <div className="space-y-1">
-        <ResourceBar
-          label="CPU"
-          resource={resources.cpu}
-          icon={<Cpu size={10} />}
-          warning={resources.cpu.current > 85}
-        />
-        
-        <ResourceBar
-          label="RAM"
-          resource={resources.ram}
-          icon={<HardDrive size={10} />}
-          warning={resources.ram.current / resources.ram.max > 0.9}
-        />
-        
-        <ResourceBar
-          label="NET"
-          resource={resources.network}
-          icon={<Wifi size={10} />}
-        />
-        
-        <ResourceBar
-          label="TMP"
-          resource={resources.temperature}
-          icon={<Thermometer size={10} />}
-          warning={resources.temperature.current > 75}
-        />
-      </div>
-
-      {/* Trace Level */}
-      <div className="flex items-center gap-1 pt-1 border-t border-matrix-green/30 mt-2">
-        <div className="flex items-center gap-1">
-          <Zap size={10} />
-          <span className="text-xs text-matrix-cyan">TRACE:</span>
-        </div>
-        <div className="flex-1 h-1.5 bg-gray-800 border border-matrix-green/30 rounded overflow-hidden">
-          <div 
-            className={`h-full transition-all duration-500 ${
-              gameState.traceLevel >= 80 ? 'bg-red-500 animate-pulse' :
-              gameState.traceLevel >= 50 ? 'bg-orange-500' :
-              gameState.traceLevel >= 25 ? 'bg-yellow-400' :
-              'bg-matrix-green'
-            }`}
-            style={{ width: `${gameState.traceLevel || 0}%` }}
-          />
-        </div>
-        <span className={`text-xs font-bold w-8 text-right ${getTraceColor()}`}>
-          {gameState.traceLevel || 0}%
-        </span>
+        {/* Top Processes */}
+        {processes.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Running Processes</h4>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {processes.slice(0, 5).map((process) => (
+                <div key={process.id} className="flex justify-between text-xs">
+                  <span className="text-gray-400 truncate">{process.name}</span>
+                  <span className="text-cyan-400">{process.cpuUsage.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+export default ResourceMonitorEnhanced;

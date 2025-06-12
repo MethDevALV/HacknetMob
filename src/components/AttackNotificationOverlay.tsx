@@ -12,7 +12,7 @@ export const AttackNotificationOverlay: React.FC<AttackNotificationOverlayProps>
   attack,
   onDefenseActivated
 }) => {
-  const [timeRemaining, setTimeRemaining] = useState(attack.timeToRespond);
+  const [timeRemaining, setTimeRemaining] = useState(attack.timeToRespond || 30000);
   const [showDefenseInterface, setShowDefenseInterface] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -69,12 +69,17 @@ export const AttackNotificationOverlay: React.FC<AttackNotificationOverlayProps>
       panic: 'PÁNICO - Desconexión total'
     };
 
-    return attack.defenseOptions.map((defense: string) => 
+    const defenseOptions = attack.defenseOptions || ['firewall', 'proxy'];
+    return defenseOptions.map((defense: string) => 
       defenseDescriptions[defense as keyof typeof defenseDescriptions] || defense
     );
   };
 
   if (!isVisible) return null;
+
+  // Ensure attack.effects exists with default values
+  const effects = attack.effects || {};
+  const initialTimeToRespond = attack.timeToRespond || 30000;
 
   return (
     <>
@@ -94,7 +99,7 @@ export const AttackNotificationOverlay: React.FC<AttackNotificationOverlayProps>
                  attack.severity === 'medium' ? '⚠️ ATAQUE DETECTADO' :
                  '🔍 ACTIVIDAD SOSPECHOSA'}
               </h2>
-              <p className="text-red-300 text-sm">{attack.message}</p>
+              <p className="text-red-300 text-sm">{attack.message || 'Actividad maliciosa detectada'}</p>
             </div>
           </div>
 
@@ -109,10 +114,10 @@ export const AttackNotificationOverlay: React.FC<AttackNotificationOverlayProps>
             <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
               <div 
                 className={`h-full transition-all duration-100 ${
-                  timeRemaining / attack.timeToRespond > 0.5 ? 'bg-green-500' :
-                  timeRemaining / attack.timeToRespond > 0.25 ? 'bg-yellow-500' : 'bg-red-500'
+                  timeRemaining / initialTimeToRespond > 0.5 ? 'bg-green-500' :
+                  timeRemaining / initialTimeToRespond > 0.25 ? 'bg-yellow-500' : 'bg-red-500'
                 }`}
-                style={{ width: `${(timeRemaining / attack.timeToRespond) * 100}%` }}
+                style={{ width: `${(timeRemaining / initialTimeToRespond) * 100}%` }}
               />
             </div>
           </div>
@@ -121,23 +126,27 @@ export const AttackNotificationOverlay: React.FC<AttackNotificationOverlayProps>
           <div className="mb-4 p-3 bg-black/50 rounded border border-gray-600">
             <h4 className="text-matrix-cyan font-semibold text-sm mb-2">Efectos del Ataque:</h4>
             <div className="text-xs text-matrix-green space-y-1">
-              {attack.effects.commandDelay && (
-                <div>• Comandos {Math.round(attack.effects.commandDelay * 100)}% más lentos</div>
+              {effects.commandDelay && (
+                <div>• Comandos {Math.round(effects.commandDelay * 100)}% más lentos</div>
               )}
-              {attack.effects.falseResults && (
-                <div>• {Math.round(attack.effects.falseResults * 100)}% resultados falsos</div>
+              {effects.falseResults && (
+                <div>• {Math.round(effects.falseResults * 100)}% resultados falsos</div>
               )}
-              {attack.effects.networkInterference && (
-                <div>• Interferencia de red: {Math.round(attack.effects.networkInterference * 100)}%</div>
+              {effects.networkInterference && (
+                <div>• Interferencia de red: {Math.round(effects.networkInterference * 100)}%</div>
               )}
-              {attack.effects.resourceDrain && (
-                <div>• Drenaje de recursos: {Math.round(attack.effects.resourceDrain * 100)}%</div>
+              {effects.resourceDrain && (
+                <div>• Drenaje de recursos: {Math.round(effects.resourceDrain * 100)}%</div>
               )}
-              {attack.effects.toolsLost && attack.effects.toolsLost.length > 0 && (
+              {effects.toolsLost && effects.toolsLost.length > 0 && (
                 <div>• Riesgo de pérdida de herramientas</div>
               )}
-              {attack.effects.traceIncrease && (
-                <div>• Aumento de rastreo: +{attack.effects.traceIncrease}%</div>
+              {effects.traceIncrease && (
+                <div>• Aumento de rastreo: +{effects.traceIncrease}%</div>
+              )}
+              {!effects.commandDelay && !effects.falseResults && !effects.networkInterference && 
+               !effects.resourceDrain && !effects.toolsLost && !effects.traceIncrease && (
+                <div>• Efectos del ataque no especificados</div>
               )}
             </div>
           </div>

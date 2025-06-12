@@ -1,222 +1,156 @@
+
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, Activity, Zap, Eye, X } from 'lucide-react';
-import { systemResourceManager } from '../utils/SystemResources';
+import { Shield, AlertTriangle, Eye, Zap } from 'lucide-react';
+import { systemResourcesEnhanced } from '../utils/SystemResourcesEnhanced';
+import { useGameState } from '../hooks/useGameState';
 
-interface SecurityStatusPanelProps {
-  className?: string;
-}
-
-export const SecurityStatusPanel: React.FC<SecurityStatusPanelProps> = ({ className = '' }) => {
-  const [alertLevel, setAlertLevel] = useState<'green' | 'yellow' | 'orange' | 'red'>('green');
-  const [riskLevel, setRiskLevel] = useState(0);
-  const [activeAttacks, setActiveAttacks] = useState<any[]>([]);
-  const [activeDefenses, setActiveDefenses] = useState<Map<string, any>>(new Map());
-  const [systemIntegrity, setSystemIntegrity] = useState(100);
-  const [isExpanded, setIsExpanded] = useState(false);
+export const SecurityStatusPanel: React.FC = () => {
+  const { gameState } = useGameState();
+  const [securityLevel, setSecurityLevel] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'>('LOW');
+  const [activeThreats, setActiveThreats] = useState<string[]>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Calculate system integrity based on resources
-      const resources = systemResourceManager.getResources();
-      let integrity = 100;
-      
-      // Reduce integrity based on resource usage
-      const cpuUsage = (resources.cpu.current / resources.cpu.max) * 100;
-      const ramUsage = (resources.ram.current / resources.ram.max) * 100;
-      integrity -= Math.max(0, cpuUsage - 80) * 0.5;
-      integrity -= Math.max(0, ramUsage - 80) * 0.5;
-      
-      setSystemIntegrity(Math.max(0, Math.min(100, integrity)));
-      
-      // Update alert level based on integrity
-      if (integrity >= 80) setAlertLevel('green');
-      else if (integrity >= 60) setAlertLevel('yellow');
-      else if (integrity >= 40) setAlertLevel('orange');
-      else setAlertLevel('red');
-    }, 1000);
+    // Calculate security level based on game state
+    let level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'LOW';
+    const threats: string[] = [];
 
-    return () => clearInterval(interval);
-  }, []);
+    if (gameState.traceLevel > 80) {
+      level = 'CRITICAL';
+      threats.push('Critical trace level detected');
+    } else if (gameState.traceLevel > 60) {
+      level = 'HIGH';
+      threats.push('High trace level');
+    } else if (gameState.traceLevel > 30) {
+      level = 'MEDIUM';
+      threats.push('Moderate trace level');
+    }
 
-  const getAlertColor = () => {
-    switch (alertLevel) {
-      case 'green': return 'bg-green-500';
-      case 'yellow': return 'bg-yellow-500';
-      case 'orange': return 'bg-orange-500';
-      case 'red': return 'bg-red-500 animate-pulse';
-      default: return 'bg-gray-500';
+    if (gameState.activeTraces && gameState.activeTraces.length > 0) {
+      threats.push(`${gameState.activeTraces.length} active trace(s)`);
+      if (level === 'LOW') level = 'MEDIUM';
+    }
+
+    if (gameState.compromisedNodes && gameState.compromisedNodes.length > 5) {
+      threats.push('Multiple compromised systems');
+      if (level === 'LOW') level = 'MEDIUM';
+    }
+
+    setSecurityLevel(level);
+    setActiveThreats(threats);
+  }, [gameState]);
+
+  const getSecurityColor = () => {
+    switch (securityLevel) {
+      case 'LOW': return 'text-green-400 border-green-400';
+      case 'MEDIUM': return 'text-yellow-400 border-yellow-400';
+      case 'HIGH': return 'text-orange-400 border-orange-400';
+      case 'CRITICAL': return 'text-red-400 border-red-400';
     }
   };
 
-  const getIntegrityColor = () => {
-    if (systemIntegrity >= 80) return 'bg-green-500';
-    if (systemIntegrity >= 60) return 'bg-yellow-500';
-    if (systemIntegrity >= 40) return 'bg-orange-500';
-    return 'bg-red-500';
-  };
-
-  const getActiveDefensesList = () => {
-    const activeList: string[] = [];
-    activeDefenses.forEach((state, defense) => {
-      if (state.active) {
-        activeList.push(defense);
-      }
-    });
-    return activeList;
+  const getSecurityIcon = () => {
+    switch (securityLevel) {
+      case 'LOW': return <Shield className="w-5 h-5" />;
+      case 'MEDIUM': return <Eye className="w-5 h-5" />;
+      case 'HIGH': return <AlertTriangle className="w-5 h-5" />;
+      case 'CRITICAL': return <Zap className="w-5 h-5" />;
+    }
   };
 
   return (
-    <div className={`fixed top-4 right-4 z-50 ${className}`}>
-      {/* Compact View */}
-      <div 
-        className={`
-          bg-black/90 border-2 rounded-lg p-3 backdrop-blur-sm cursor-pointer transition-all duration-300
-          ${alertLevel === 'red' ? 'border-red-500' : 
-            alertLevel === 'orange' ? 'border-orange-500' :
-            alertLevel === 'yellow' ? 'border-yellow-500' : 
-            'border-green-500/50'}
-          ${isExpanded ? 'w-80' : 'w-20'}
-        `}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        {!isExpanded ? (
-          /* Compact View Content */
-          <div className="flex flex-col items-center space-y-2">
-            <div className={`w-4 h-4 rounded-full ${getAlertColor()}`} />
-            <Shield size={16} className="text-matrix-green" />
-            <div className="w-2 h-8 bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                className={`${getIntegrityColor()} transition-all duration-500 rounded-full`}
-                style={{ height: `${systemIntegrity}%`, marginTop: `${100 - systemIntegrity}%` }}
-              />
-            </div>
+    <div className="h-full flex flex-col p-4 border rounded-lg" style={{
+      backgroundColor: 'var(--theme-surface)',
+      borderColor: 'var(--theme-border)',
+      color: 'var(--theme-text)'
+    }}>
+      {/* Header */}
+      <div className="mb-4 pb-2 border-b" style={{ borderColor: 'var(--theme-border)' }}>
+        <h3 className="cyber-heading text-lg">SECURITY STATUS</h3>
+      </div>
+
+      {/* Security Level */}
+      <div className={`p-3 border rounded-lg mb-4 ${getSecurityColor()}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getSecurityIcon()}
+            <span className="font-medium">Security Level</span>
           </div>
-        ) : (
-          /* Expanded View Content */
-          <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-matrix-cyan font-bold text-sm">Estado de Seguridad</h3>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsExpanded(false);
-                }}
-                className="text-matrix-green hover:text-red-400"
-              >
-                <X size={16} />
-              </button>
+          <span className="font-mono font-bold">{securityLevel}</span>
+        </div>
+      </div>
+
+      {/* Trace Level */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm text-gray-300">Trace Level</span>
+          <span className="text-sm font-mono text-cyan-400">
+            {gameState.traceLevel}%
+          </span>
+        </div>
+        <div className="w-full bg-gray-700 rounded-full h-2">
+          <div 
+            className={`h-2 rounded-full transition-all duration-300 ${
+              gameState.traceLevel > 80 ? 'bg-red-400' : 
+              gameState.traceLevel > 60 ? 'bg-orange-400' :
+              gameState.traceLevel > 30 ? 'bg-yellow-400' : 'bg-green-400'
+            }`}
+            style={{ width: `${gameState.traceLevel}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Active Defenses */}
+      <div className="mb-4">
+        <h4 className="text-sm font-medium text-gray-300 mb-2">Active Defenses</h4>
+        <div className="space-y-1">
+          {gameState.activeDefenses && gameState.activeDefenses.length > 0 ? (
+            gameState.activeDefenses.map((defense) => (
+              <div key={defense.id} className="flex justify-between text-xs">
+                <span className="text-cyan-400">{defense.name}</span>
+                <span className="text-green-400">ACTIVE</span>
+              </div>
+            ))
+          ) : (
+            <span className="text-gray-500 text-xs">No active defenses</span>
+          )}
+        </div>
+      </div>
+
+      {/* Threat Analysis */}
+      <div className="flex-1">
+        <h4 className="text-sm font-medium text-gray-300 mb-2">Threat Analysis</h4>
+        <div className="space-y-1">
+          {activeThreats.length > 0 ? (
+            activeThreats.map((threat, index) => (
+              <div key={index} className="flex items-center gap-2 text-xs">
+                <AlertTriangle className="w-3 h-3 text-yellow-400" />
+                <span className="text-yellow-400">{threat}</span>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center gap-2 text-xs">
+              <Shield className="w-3 h-3 text-green-400" />
+              <span className="text-green-400">No immediate threats detected</span>
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* Threat Level */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-matrix-green text-xs">Nivel de Amenaza:</span>
-                <div className={`w-3 h-3 rounded-full ${getAlertColor()}`} />
-              </div>
-              <div className="text-xs capitalize text-matrix-cyan">
-                {alertLevel === 'green' && '🟢 Seguro'}
-                {alertLevel === 'yellow' && '🟡 Vigilancia'}
-                {alertLevel === 'orange' && '🟠 Alerta'}
-                {alertLevel === 'red' && '🔴 CRÍTICO'}
-              </div>
-            </div>
-
-            {/* System Integrity */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-matrix-green text-xs">Integridad:</span>
-                <span className="text-matrix-cyan text-xs">{Math.round(systemIntegrity)}%</span>
-              </div>
-              <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                <div 
-                  className={`${getIntegrityColor()} h-full transition-all duration-500`}
-                  style={{ width: `${systemIntegrity}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Active Attacks */}
-            {activeAttacks.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={12} className="text-red-500" />
-                  <span className="text-red-400 text-xs font-semibold">
-                    Ataques Activos ({activeAttacks.length})
-                  </span>
-                </div>
-                <div className="space-y-1 max-h-20 overflow-y-auto">
-                  {activeAttacks.map((attack, index) => (
-                    <div key={index} className="text-xs bg-red-500/20 p-1 rounded border border-red-500/30">
-                      <div className="text-red-400 font-semibold">{attack.type}</div>
-                      <div className="text-red-300 text-[10px]">{attack.severity.toUpperCase()}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Active Defenses */}
-            {getActiveDefensesList().length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Shield size={12} className="text-green-500" />
-                  <span className="text-green-400 text-xs font-semibold">
-                    Defensas Activas ({getActiveDefensesList().length})
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-1">
-                  {getActiveDefensesList().slice(0, 4).map((defense, index) => (
-                    <div key={index} className="text-xs bg-green-500/20 p-1 rounded border border-green-500/30 text-center">
-                      <div className="text-green-400 capitalize">{defense}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Risk Level */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-matrix-green text-xs">Nivel de Riesgo:</span>
-                <span className="text-matrix-cyan text-xs">{riskLevel}%</span>
-              </div>
-              <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-500 ${
-                    riskLevel < 25 ? 'bg-green-500' :
-                    riskLevel < 50 ? 'bg-yellow-500' :
-                    riskLevel < 75 ? 'bg-orange-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${riskLevel}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-1 pt-2 border-t border-matrix-green/30">
-              <button 
-                className="text-xs bg-blue-500/20 text-blue-400 p-1 rounded border border-blue-500/30 hover:bg-blue-500/30"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Implement firewall activation
-                }}
-              >
-                Firewall
-              </button>
-              <button 
-                className="text-xs bg-red-500/20 text-red-400 p-1 rounded border border-red-500/30 hover:bg-red-500/30"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Implement panic command
-                }}
-              >
-                Pánico
-              </button>
-            </div>
-          </div>
-        )}
+      {/* Connection Status */}
+      <div className="mt-auto pt-2 border-t" style={{ borderColor: 'var(--theme-border)' }}>
+        <div className="flex justify-between text-xs">
+          <span className="text-gray-300">Current Node:</span>
+          <span className="text-cyan-400 font-mono">{gameState.currentNode}</span>
+        </div>
+        <div className="flex justify-between text-xs mt-1">
+          <span className="text-gray-300">Compromised:</span>
+          <span className="text-cyan-400 font-mono">
+            {gameState.compromisedNodes?.length || 0}
+          </span>
+        </div>
       </div>
     </div>
   );
 };
+
+export default SecurityStatusPanel;

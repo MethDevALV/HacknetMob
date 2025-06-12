@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useGameState } from './useGameState';
-import { ConsequenceResult } from '../types/GameTypes';
+import { ConsequenceResult, GameEvent } from '../types/CoreTypes';
 
 interface IntrusionState {
   isDetected: boolean;
@@ -78,10 +78,12 @@ export const useIntrusionDetection = () => {
           {
             id: `security_alert_${Date.now()}`,
             title: 'CRITICAL SECURITY ALERT',
+            message: `High-priority intrusion detected on ${targetNode}`,
             description: `High-priority intrusion detected on ${targetNode}`,
-            timestamp: Date.now(),
+            timestamp: new Date(),
             type: 'security',
-            severity: 'critical'
+            severity: 'critical',
+            read: false
           }
         ]
       });
@@ -125,10 +127,12 @@ export const useIntrusionDetection = () => {
           {
             id: `system_lockout_${Date.now()}`,
             title: 'SYSTEM LOCKOUT INITIATED',
+            message: 'Critical security breach detected. System access restricted.',
             description: 'Critical security breach detected. System access restricted.',
-            timestamp: Date.now(),
+            timestamp: new Date(),
             type: 'security',
-            severity: 'critical'
+            severity: 'critical',
+            read: false
           }
         ]
       });

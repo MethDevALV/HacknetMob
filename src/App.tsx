@@ -1,33 +1,25 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { GameStateProvider } from "./hooks/useGameState";
-import { LanguageProvider } from "./hooks/useLanguage";
-import IndexEnhanced from "./pages/IndexEnhanced";
-import NotFound from "./pages/NotFound";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
+import GameStateProvider from './hooks/useGameState';
+import MobileHackNet from './pages/MobileHackNet';
+import './styles/hacknet-effects.css';
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <LanguageProvider>
-        <GameStateProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+function App() {
+  return (
+    <ThemeProvider>
+      <GameStateProvider>
+        <Router>
+          <div className="App h-screen">
             <Routes>
-              <Route path="/" element={<IndexEnhanced />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="/" element={<MobileHackNet />} />
             </Routes>
-          </BrowserRouter>
-        </GameStateProvider>
-      </LanguageProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+          </div>
+        </Router>
+      </GameStateProvider>
+    </ThemeProvider>
+  );
+}
 
 export default App;

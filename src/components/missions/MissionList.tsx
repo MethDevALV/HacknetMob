@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Mission } from '../../utils/missions/MissionData';
-import { MissionManager } from '../../utils/missions/MissionManager';
+import { Mission } from '../../types/CoreTypes';
+import { MissionManagerEnhanced } from '../../utils/missions/MissionManagerEnhanced';
 
 interface MissionListProps {
   missions: Mission[];
@@ -33,8 +33,7 @@ export const MissionList: React.FC<MissionListProps> = ({
       'tutorial': 'text-green-400',
       'easy': 'text-matrix-green',
       'medium': 'text-yellow-400',
-      'hard': 'text-orange-500',
-      'extreme': 'text-red-500'
+      'hard': 'text-orange-500'
     };
     return colors[difficulty] || 'text-matrix-green';
   };
@@ -98,7 +97,7 @@ export const MissionList: React.FC<MissionListProps> = ({
 
             {gameState.activeMissions?.includes(mission.id) && (
               <div className="mt-2 text-xs text-yellow-400">
-                Progress: {MissionManager.getProgressText(mission, gameState)}
+                Progress: {MissionManagerEnhanced.getProgressText(mission, gameState)}
               </div>
             )}
           </div>

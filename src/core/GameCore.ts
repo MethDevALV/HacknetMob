@@ -1,5 +1,5 @@
-
-import { GameState } from '../types/HackNetTypes';
+import { EventEmitter } from 'events';
+import { GameState, NetworkNode, HackingTool, Mission } from '../types/CoreTypes';
 
 type EventType = 'scan_completed' | 'node_compromised' | 'file_system_changed' | 'mission_updated' | 'network_updated' | 'tool_started' | 'tool_completed' | 'file_deleted' | 'file_downloaded';
 

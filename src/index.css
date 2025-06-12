@@ -1,13 +1,15 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Cyberpunk Design System for Hacknet Mobile */
+/* Import theme styles - must be before other rules */
+@import './styles/themes.css';
+
+/* Enhanced Cyberpunk Design System for Hacknet Mobile */
 
 @layer base {
   :root {
-    /* Core Hacknet Colors */
+    /* Core Hacknet Colors - Now using CSS variables from themes */
     --background: 0 0% 0%;
     --foreground: 120 100% 50%;
 
@@ -46,14 +48,6 @@
     --sidebar-accent-foreground: 120 100% 50%;
     --sidebar-border: 120 100% 15%;
     --sidebar-ring: 120 100% 50%;
-
-    /* Cyberpunk specific variables */
-    --matrix-green: 120 100% 50%;
-    --matrix-cyan: 180 100% 50%;
-    --matrix-yellow: 60 100% 50%;
-    --matrix-red: 0 100% 50%;
-    --matrix-orange: 39 100% 50%;
-    --matrix-gray: 0 0% 50%;
   }
 
   .dark {
@@ -102,39 +96,48 @@
   }
 
   body {
-    @apply bg-background text-foreground font-mono;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
-    background: linear-gradient(135deg, #000000 0%, #001100 50%, #000000 100%);
-    background-attachment: fixed;
+    font-family: var(--theme-font-mono, Monaco, 'Lucida Console', monospace);
+    background: var(--theme-background, #000000);
+    color: var(--theme-text, #00FF41);
+    transition: all 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
   }
 
-  /* Terminal cursor animation */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Enhanced animations */
   .terminal-cursor {
     animation: cursor-blink 1s infinite;
   }
 
-  /* Matrix rain effect background */
-  .matrix-bg::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: 
-      linear-gradient(90deg, transparent 98%, rgba(0, 255, 65, 0.1) 100%),
-      linear-gradient(180deg, transparent 98%, rgba(0, 255, 65, 0.05) 100%);
-    background-size: 20px 20px;
-    pointer-events: none;
-    z-index: -1;
+  @keyframes cursor-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
   }
 
-  /* Glitch text effect */
+  /* Glitch text effect for errors and alerts */
   .glitch-text {
     position: relative;
-    animation: glitch 3s infinite;
+    animation: glitch 2s infinite;
   }
 
   .glitch-text::before,
@@ -148,15 +151,23 @@
   }
 
   .glitch-text::before {
-    animation: glitch-1 0.5s infinite;
-    color: #ff0000;
+    animation: glitch-1 0.3s infinite;
+    color: var(--theme-error, #ff0000);
     z-index: -1;
   }
 
   .glitch-text::after {
-    animation: glitch-2 0.5s infinite;
-    color: #00ffff;
+    animation: glitch-2 0.3s infinite;
+    color: var(--theme-secondary, #00ffff);
     z-index: -2;
+  }
+
+  @keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-1px, 1px); }
+    40% { transform: translate(-1px, -1px); }
+    60% { transform: translate(1px, 1px); }
+    80% { transform: translate(1px, -1px); }
   }
 
   @keyframes glitch-1 {
@@ -175,70 +186,39 @@
     80% { transform: translate(0, -2px); }
   }
 
-  /* Scrollbar styling for cyberpunk theme */
+  /* Enhanced scrollbar styling */
   ::-webkit-scrollbar {
-    width: 8px;
+    width: 4px;
+    height: 4px;
   }
 
   ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(0, 255, 65, 0.3);
+    background: var(--theme-background);
+    border: 1px solid var(--theme-border);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #00FF41 0%, #00AA2B 100%);
+    background: var(--theme-primary);
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #00FFFF 0%, #0099CC 100%);
+    background: var(--theme-secondary);
   }
 
   /* Selection color */
   ::selection {
-    background: rgba(0, 255, 65, 0.3);
-    color: #FFFFFF;
+    background: var(--theme-primary);
+    color: var(--theme-background);
   }
 
-  /* Remove default focus outlines and add cyberpunk ones */
+  /* Enhanced focus styles */
   button:focus,
   input:focus,
   select:focus,
   textarea:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.8);
-  }
-
-  /* Cyberpunk button hover effects */
-  .cyber-btn {
-    background: transparent;
-    border: 1px solid #00FF41;
-    color: #00FF41;
-    transition: all 0.3s ease;
-    font-family: inherit;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .cyber-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), transparent);
-    transition: left 0.5s;
-  }
-
-  .cyber-btn:hover::before {
-    left: 100%;
-  }
-
-  .cyber-btn:hover {
-    background: rgba(0, 255, 65, 0.1);
-    box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
-    text-shadow: 0 0 10px #00FF41;
+    box-shadow: 0 0 0 2px var(--theme-primary);
   }
 
   /* Loading animation for hacking processes */
@@ -256,8 +236,8 @@
     height: 16px;
     margin: 2px;
     border-radius: 50%;
-    border: 2px solid #00FF41;
-    border-color: #00FF41 transparent #00FF41 transparent;
+    border: 2px solid var(--theme-primary);
+    border-color: var(--theme-primary) transparent var(--theme-primary) transparent;
     animation: hack-loader-spin 1.2s linear infinite;
   }
 
@@ -269,7 +249,7 @@
   /* Typing animation for command output */
   .typing-effect {
     overflow: hidden;
-    border-right: 2px solid #00FF41;
+    border-right: 2px solid var(--theme-primary);
     white-space: nowrap;
     animation: typing 2s steps(40, end), cursor-blink 1s step-end infinite;
   }
@@ -279,6 +259,16 @@
     to { width: 100%; }
   }
 
+  /* Attack animation */
+  .under-attack {
+    animation: screen-flicker 0.2s infinite;
+  }
+
+  @keyframes screen-flicker {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.3) hue-rotate(5deg); }
+  }
+
   /* Responsive design for mobile */
   @media (max-width: 768px) {
     body {
@@ -286,7 +276,7 @@
     }
     
     .glitch-text {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
     
     /* Optimize touch targets for mobile */
@@ -294,14 +284,34 @@
       min-height: 44px;
       min-width: 44px;
     }
+
+    /* Mobile-specific terminal styling */
+    .terminal-input {
+      font-size: 16px; /* Prevent zoom on iOS */
+    }
+
+    /* Mobile scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 480px) {
+    body {
+      font-size: 13px;
+    }
+
+    /* Smaller touch targets for very small screens */
+    button, .clickable {
+      min-height: 40px;
+      min-width: 40px;
+    }
   }
 
   /* High contrast mode support */
   @media (prefers-contrast: high) {
-    body {
-      background: #000000;
-    }
-    
     .glitch-text {
       animation: none;
       text-shadow: none;
@@ -322,7 +332,7 @@
 
 /* Terminal specific styles */
 .terminal-line {
-  font-family: 'Space Mono', 'Monaco', 'Lucida Console', monospace;
+  font-family: var(--theme-font-mono);
   line-height: 1.4;
   word-wrap: break-word;
 }
@@ -335,7 +345,7 @@
   font-size: inherit;
   outline: none;
   width: 100%;
-  caret-color: #00FF41;
+  caret-color: var(--theme-primary);
 }
 
 /* Network map styles */
@@ -352,18 +362,19 @@
 
 /* File system styles */
 .file-item {
-  font-family: 'Space Mono', monospace;
+  font-family: var(--theme-font-mono);
   transition: all 0.2s ease;
 }
 
 .file-item:hover {
-  background: rgba(0, 255, 65, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.3);
+  background: var(--theme-primary);
+  color: var(--theme-background);
+  box-shadow: inset 0 0 0 1px var(--theme-primary);
 }
 
 /* Mission panel styles */
 .mission-item {
-  background: linear-gradient(135deg, rgba(0, 255, 65, 0.05) 0%, rgba(0, 0, 0, 0.8) 100%);
+  background: linear-gradient(135deg, var(--theme-surface) 0%, var(--theme-background) 100%);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -376,7 +387,8 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.1), transparent);
+  background: linear-gradient(90deg, transparent, var(--theme-primary), transparent);
+  opacity: 0.1;
   transition: left 0.5s;
 }
 
@@ -384,26 +396,68 @@
   left: 100%;
 }
 
-/* Utility classes for cyberpunk effects */
+/* Status indicators */
+.status-normal { color: var(--theme-success); }
+.status-warning { color: var(--theme-warning); }
+.status-critical { 
+  color: var(--theme-error);
+  animation: critical-pulse 1s ease-in-out infinite;
+}
+
+@keyframes critical-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Utility classes for enhanced effects */
 .neon-glow {
   text-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
 }
 
 .cyber-border {
-  border: 1px solid #00FF41;
-  box-shadow: inset 0 0 0 1px rgba(0, 255, 65, 0.1);
+  border: 1px solid var(--theme-primary);
+  box-shadow: inset 0 0 0 1px var(--theme-primary);
+  opacity: 0.1;
 }
 
 .hack-pulse {
   animation: hack-pulse 2s ease-in-out infinite;
 }
 
+@keyframes hack-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* Enhanced theme-aware components */
 .matrix-text {
-  color: #00FF41;
-  font-family: 'Share Tech Mono', monospace;
+  color: var(--theme-primary);
+  font-family: var(--theme-font-mono);
 }
 
 .danger-text {
-  color: #FF0000;
+  color: var(--theme-error);
   animation: trace-warning 1s ease-in-out infinite;
+}
+
+@keyframes trace-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Print styles */
+@media print {
+  body::before,
+  .theme-matrix::before,
+  .theme-cyberpunk::before,
+  .theme-hacker::before,
+  .theme-retro::before,
+  .theme-corporate::before {
+    display: none !important;
+  }
+  
+  .glitch-text {
+    animation: none !important;
+    text-shadow: none !important;
+  }
 }

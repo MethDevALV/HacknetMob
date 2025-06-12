@@ -1,421 +1,245 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useGameState } from '../hooks/useGameState';
-import { Monitor, Server, Shield, Wifi, Lock, Unlock, Grid, List, Eye, EyeOff } from 'lucide-react';
-import { t } from '../utils/i18n';
 
-interface NetworkNode {
-  id: string;
-  x: number;
-  y: number;
-  ip: string;
-  hostname: string;
-  type: string;
-  security: string;
-  os: string;
-  compromised: boolean;
-  connections: string[];
+import React, { useEffect, useRef, useState } from 'react';
+import { useGameState } from '../hooks/useGameState';
+import { NetworkNode } from '../types/CoreTypes';
+import { Monitor, Server, Wifi, Smartphone, Shield } from 'lucide-react';
+
+interface NetworkMapDualProps {
+  onNodeConnect: (nodeIp: string) => void;
 }
 
-export const NetworkMapDual: React.FC = () => {
-  const { getVisibleDevices, gameState } = useGameState();
-  const [viewMode, setViewMode] = useState<'graphical' | 'list'>('graphical');
-  const [nodes, setNodes] = useState<NetworkNode[]>([]);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+const NetworkMapDual: React.FC<NetworkMapDualProps> = ({ onNodeConnect }) => {
+  const { gameState } = useGameState();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Load view preference
-    const savedView = localStorage.getItem('hacknet-network-view');
-    if (savedView === 'graphical' || savedView === 'list') {
-      setViewMode(savedView);
+  const getNodeIcon = (type: string) => {
+    switch (type) {
+      case 'server': return Server;
+      case 'router': return Wifi;
+      case 'device': return Smartphone;
+      case 'workstation': 
+      default: return Monitor;
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    // Save view preference
-    localStorage.setItem('hacknet-network-view', viewMode);
-  }, [viewMode]);
+  const getSecurityColor = (security: string, compromised: boolean) => {
+    if (compromised) return '#00ff41';
+    switch (security) {
+      case 'low': return '#ffff00';
+      case 'medium': return '#ff8c00';
+      case 'high': return '#ff0000';
+      default: return '#ffffff';
+    }
+  };
 
-  useEffect(() => {
-    // Convert devices to network nodes for graphical view
-    const visibleDevices = getVisibleDevices();
-    const networkNodes: NetworkNode[] = visibleDevices.map((device, index) => {
-      // Create a circular layout
-      const angle = (index * 2 * Math.PI) / Math.max(visibleDevices.length - 1, 1);
-      const radius = Math.min(120, 50 + visibleDevices.length * 10);
+  const redistributeNodes = (nodes: NetworkNode[]): NetworkNode[] => {
+    const canvas = canvasRef.current;
+    if (!canvas) return nodes;
+
+    const { width, height } = canvas;
+    const padding = 80;
+    const minDistance = 120; // Minimum distance between nodes
+
+    return nodes.map((node, index) => {
+      // Create a more distributed layout
+      const cols = Math.ceil(Math.sqrt(nodes.length));
+      const rows = Math.ceil(nodes.length / cols);
+      
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      
+      const cellWidth = (width - 2 * padding) / cols;
+      const cellHeight = (height - 2 * padding) / rows;
+      
+      // Add some randomness to avoid perfect grid
+      const randomX = (Math.random() - 0.5) * (cellWidth * 0.3);
+      const randomY = (Math.random() - 0.5) * (cellHeight * 0.3);
       
       return {
-        id: device.ip,
-        x: 200 + (index === 0 ? 0 : Math.cos(angle) * radius),
-        y: 150 + (index === 0 ? 0 : Math.sin(angle) * radius),
-        ip: device.ip,
-        hostname: device.hostname,
-        type: device.type,
-        security: device.security,
-        os: device.os,
-        compromised: device.compromised,
-        connections: index === 0 ? [] : [visibleDevices[0].ip] // Connect to localhost
+        ...node,
+        x: padding + col * cellWidth + cellWidth / 2 + randomX,
+        y: padding + row * cellHeight + cellHeight / 2 + randomY
       };
     });
+  };
 
-    setNodes(networkNodes);
-  }, [getVisibleDevices()]);
-
-  // Draw connections on canvas
   useEffect(() => {
-    if (viewMode !== 'graphical' || !canvasRef.current) return;
-    
     const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw grid background
-    ctx.strokeStyle = 'rgba(0, 255, 65, 0.1)';
-    ctx.lineWidth = 1;
-    
-    for (let x = 0; x < canvas.width; x += 20) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-    
-    for (let y = 0; y < canvas.height; y += 20) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
+    // Set canvas size
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
 
-    // Draw connections
-    nodes.forEach(node => {
-      node.connections.forEach(connId => {
-        const connectedNode = nodes.find(n => n.id === connId);
-        if (!connectedNode) return;
-        
-        ctx.strokeStyle = node.compromised && connectedNode.compromised ? '#00FFFF' : '#00FF41';
-        ctx.lineWidth = 2;
-        ctx.setLineDash(node.compromised && connectedNode.compromised ? [] : [5, 5]);
-        
-        ctx.beginPath();
-        ctx.moveTo(node.x + 30, node.y + 30);
-        ctx.lineTo(connectedNode.x + 30, connectedNode.y + 30);
-        ctx.stroke();
-      });
+    // Clear canvas
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const discoveredNodes = gameState.discoveredDevices || [];
+    if (discoveredNodes.length === 0) return;
+
+    // Redistribute nodes for better spacing
+    const redistributedNodes = redistributeNodes(discoveredNodes);
+
+    // Draw connections first (so they appear behind nodes)
+    ctx.strokeStyle = '#00ff41';
+    ctx.lineWidth = 1;
+    redistributedNodes.forEach(node => {
+      if (node.connections) {
+        node.connections.forEach(connectedIp => {
+          const connectedNode = redistributedNodes.find(n => n.ip === connectedIp);
+          if (connectedNode && connectedNode.discovered) {
+            ctx.beginPath();
+            ctx.moveTo(node.x, node.y);
+            ctx.lineTo(connectedNode.x, connectedNode.y);
+            ctx.stroke();
+          }
+        });
+      }
     });
 
-    // Add scan lines effect
-    ctx.strokeStyle = 'rgba(0, 255, 65, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([]);
-    
-    const time = Date.now() * 0.001;
-    for (let i = 0; i < 3; i++) {
-      const y = ((time * 50 + i * 100) % (canvas.height + 100)) - 50;
+    // Draw nodes
+    redistributedNodes.forEach(node => {
+      const color = getSecurityColor(node.security, node.compromised);
+      const isSelected = selectedNode === node.ip;
+
+      // Node circle
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
+      ctx.arc(node.x, node.y, isSelected ? 25 : 20, 0, 2 * Math.PI);
+      ctx.fillStyle = node.compromised ? '#00ff41' : color;
+      ctx.fill();
+      ctx.strokeStyle = isSelected ? '#ffffff' : color;
+      ctx.lineWidth = isSelected ? 3 : 2;
       ctx.stroke();
-    }
-  }, [nodes, viewMode]);
 
-  const getDeviceIcon = (type: string, compromised: boolean) => {
-    const iconProps = { 
-      size: viewMode === 'graphical' ? 20 : 16, 
-      className: compromised ? 'text-matrix-cyan' : 'text-matrix-green' 
-    };
-    
-    switch (type.toLowerCase()) {
-      case 'server':
-        return <Server {...iconProps} />;
-      case 'router':
-        return <Wifi {...iconProps} />;
-      case 'firewall':
-        return <Shield {...iconProps} />;
-      default:
-        return <Monitor {...iconProps} />;
+      // Node label
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(node.hostname, node.x, node.y - 35);
+      ctx.fillText(node.ip, node.x, node.y + 45);
+
+      // Security indicator
+      if (!node.compromised) {
+        ctx.beginPath();
+        ctx.arc(node.x + 15, node.y - 15, 8, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    });
+
+  }, [gameState.discoveredDevices, selectedNode]);
+
+  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const discoveredNodes = gameState.discoveredDevices || [];
+    const redistributedNodes = redistributeNodes(discoveredNodes);
+
+    // Check if click is on a node
+    const clickedNode = redistributedNodes.find(node => {
+      const distance = Math.sqrt((x - node.x) ** 2 + (y - node.y) ** 2);
+      return distance <= 25;
+    });
+
+    if (clickedNode) {
+      setSelectedNode(clickedNode.ip);
+      if (clickedNode.compromised) {
+        onNodeConnect(clickedNode.ip);
+      }
+    } else {
+      setSelectedNode(null);
     }
   };
-
-  const getSecurityColor = (security: string) => {
-    switch (security.toLowerCase()) {
-      case 'high':
-        return 'text-red-400';
-      case 'medium':
-        return 'text-yellow-400';
-      case 'low':
-        return 'text-green-400';
-      default:
-        return 'text-matrix-green';
-    }
-  };
-
-  const handleNodeClick = (nodeId: string) => {
-    setSelectedNode(selectedNode === nodeId ? null : nodeId);
-  };
-
-  const renderGraphicalView = () => {
-    const visibleDevices = getVisibleDevices();
-
-    if (visibleDevices.length <= 1) {
-      return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="mb-4">
-              <Wifi size={48} className="mx-auto mb-4 opacity-30 text-matrix-green" />
-            </div>
-            <p className="text-lg mb-2 text-matrix-green">{t('network.scanRequired')}</p>
-            <p className="text-sm text-matrix-green/70">{t('network.scanHint')}</p>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex-1 relative overflow-hidden bg-black">
-        {/* Canvas for background grid and connections */}
-        <canvas
-          ref={canvasRef}
-          width={800}
-          height={600}
-          className="absolute inset-0 w-full h-full"
-          style={{ imageRendering: 'pixelated' }}
-        />
-
-        {/* Network nodes */}
-        <div className="absolute inset-0">
-          {nodes.map(node => (
-            <div
-              key={node.id}
-              className={`absolute cursor-pointer transition-all duration-300 ${
-                selectedNode === node.id ? 'z-20' : 'z-10'
-              }`}
-              style={{ 
-                left: `${(node.x / 800) * 100}%`, 
-                top: `${(node.y / 600) * 100}%`,
-                transform: 'translate(-50%, -50%)'
-              }}
-              onClick={() => handleNodeClick(node.id)}
-            >
-              {/* Node circle */}
-              <div className={`relative w-16 h-16 rounded-full border-2 flex items-center justify-center backdrop-blur-sm ${
-                node.compromised 
-                  ? 'border-matrix-cyan bg-matrix-cyan/20 shadow-lg shadow-matrix-cyan/50' 
-                  : 'border-matrix-green bg-black/80'
-              } ${selectedNode === node.id ? 'ring-2 ring-yellow-400 scale-110' : 'hover:scale-105'}`}>
-                
-                {/* Node icon */}
-                {getDeviceIcon(node.type, node.compromised)}
-                
-                {/* Security indicator */}
-                <div className="absolute -top-1 -right-1">
-                  {node.compromised ? (
-                    <Unlock size={12} className="text-matrix-cyan" />
-                  ) : (
-                    <Lock size={12} className="text-matrix-green" />
-                  )}
-                </div>
-
-                {/* Current node indicator */}
-                {gameState.currentNode === node.ip && (
-                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                    <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
-                  </div>
-                )}
-
-                {/* Pulsing effect for active nodes */}
-                {node.compromised && (
-                  <div className="absolute inset-0 rounded-full border-2 border-matrix-cyan animate-ping opacity-50" />
-                )}
-              </div>
-
-              {/* Node label */}
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 text-center">
-                <div className="text-xs font-mono text-matrix-cyan bg-black/80 px-1 rounded">
-                  {node.hostname}
-                </div>
-                <div className="text-xs font-mono text-matrix-green/70 bg-black/80 px-1 rounded">
-                  {node.ip}
-                </div>
-              </div>
-
-              {/* Detailed info popup */}
-              {selectedNode === node.id && (
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-8 z-30 
-                                bg-black/95 border border-matrix-green p-3 rounded-lg min-w-48
-                                backdrop-blur-md shadow-lg shadow-matrix-green/20">
-                  <div className="text-sm space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-matrix-green/70">{t('common.type')}:</span>
-                      <span className="text-matrix-green">{node.type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-matrix-green/70">OS:</span>
-                      <span className="text-matrix-green">{node.os}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-matrix-green/70">{t('network.security')}:</span>
-                      <span className={getSecurityColor(node.security)}>{node.security}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-matrix-green/70">{t('common.status')}:</span>
-                      <span className={node.compromised ? 'text-matrix-cyan' : 'text-yellow-400'}>
-                        {node.compromised ? t('network.compromised') : t('network.secured')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Legend */}
-        <div className="absolute bottom-4 left-4 bg-black/90 border border-matrix-green/30 p-3 rounded backdrop-blur-sm">
-          <div className="text-xs text-matrix-green/70 mb-2">Legend:</div>
-          <div className="space-y-1 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 border border-matrix-cyan bg-matrix-cyan/20 rounded-full"></div>
-              <span className="text-matrix-cyan">{t('network.compromised')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 border border-matrix-green bg-black rounded-full"></div>
-              <span className="text-matrix-green">{t('network.secured')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-              <span className="text-yellow-400">{t('network.currentNode')}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Network info overlay */}
-        <div className="absolute top-4 right-4 bg-black/90 border border-matrix-green/30 p-2 rounded backdrop-blur-sm">
-          <div className="text-xs text-matrix-green">
-            <div>Nodes: {nodes.length}</div>
-            <div>Compromised: {nodes.filter(n => n.compromised).length}</div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderListView = () => {
-    const visibleDevices = getVisibleDevices();
-
-    if (visibleDevices.length <= 1) {
-      return (
-        <div className="text-center py-8 text-matrix-green/60">
-          <div className="mb-4">
-            <Wifi size={48} className="mx-auto mb-2 opacity-30" />
-          </div>
-          <p className="text-lg mb-2">{t('network.scanRequired')}</p>
-          <p className="text-sm">{t('network.scanHint')}</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex-1 overflow-y-auto space-y-2 p-4">
-        {visibleDevices.map((device) => (
-          <div
-            key={device.ip}
-            className={`p-3 border rounded transition-all ${
-              device.compromised
-                ? 'border-matrix-cyan bg-matrix-cyan/10'
-                : 'border-matrix-green/30 hover:border-matrix-green/60'
-            } ${gameState.currentNode === device.ip ? 'ring-2 ring-yellow-400' : ''}`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                {getDeviceIcon(device.type, device.compromised)}
-                <span className="font-mono text-sm">
-                  {device.hostname} ({device.ip})
-                </span>
-                {gameState.currentNode === device.ip && (
-                  <span className="text-xs bg-yellow-400 text-black px-2 py-1 rounded">
-                    CURRENT
-                  </span>
-                )}
-              </div>
-              {device.compromised ? (
-                <Unlock size={16} className="text-matrix-cyan" />
-              ) : (
-                <Lock size={16} className="text-matrix-green" />
-              )}
-            </div>
-            
-            <div className="text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="text-matrix-green/70">{t('common.type')}:</span>
-                <span>{device.type}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-matrix-green/70">OS:</span>
-                <span>{device.os}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-matrix-green/70">{t('network.security')}:</span>
-                <span className={getSecurityColor(device.security)}>{device.security}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-matrix-green/70">{t('common.status')}:</span>
-                <span className={device.compromised ? 'text-matrix-cyan' : 'text-yellow-400'}>
-                  {device.compromised ? t('network.compromised') : t('network.secured')}
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const visibleDevices = getVisibleDevices();
 
   return (
-    <div className="h-full flex flex-col bg-black text-matrix-green">
+    <div className="h-full flex flex-col bg-black/90 border border-green-400/30 rounded-lg">
       {/* Header */}
-      <div className="p-3 border-b border-matrix-green/30 bg-black/90">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-matrix-cyan font-bold text-lg">{t('network.title')}</h2>
-          
-          {/* View mode toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-matrix-green/70">{t('network.viewMode')}:</span>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 border rounded transition-all ${
-                viewMode === 'list'
-                  ? 'border-matrix-cyan text-matrix-cyan bg-matrix-cyan/20'
-                  : 'border-matrix-green/30 text-matrix-green hover:border-matrix-green'
-              }`}
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode('graphical')}
-              className={`p-2 border rounded transition-all ${
-                viewMode === 'graphical'
-                  ? 'border-matrix-cyan text-matrix-cyan bg-matrix-cyan/20'
-                  : 'border-matrix-green/30 text-matrix-green hover:border-matrix-green'
-              }`}
-            >
-              <Grid size={16} />
-            </button>
+      <div className="p-3 border-b border-green-400/30 bg-gradient-to-r from-black to-gray-900">
+        <div className="flex items-center justify-between">
+          <h3 className="text-cyan-400 font-bold text-lg font-mono">NETWORK MAP</h3>
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+              <span className="text-green-400">Compromised</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+              <span className="text-yellow-400">Low Security</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+              <span className="text-red-400">High Security</span>
+            </div>
           </div>
-        </div>
-        
-        <div className="text-sm text-matrix-green/70">
-          {t('network.currentNode')}: {gameState.currentNode} | {t('network.discovered')}: {visibleDevices.length}
         </div>
       </div>
 
-      {/* Main content */}
-      {viewMode === 'graphical' ? renderGraphicalView() : renderListView()}
+      {/* Canvas */}
+      <div className="flex-1 relative">
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full cursor-pointer"
+          onClick={handleCanvasClick}
+        />
+        
+        {selectedNode && (
+          <div className="absolute top-4 left-4 bg-gray-900/90 border border-green-400/50 rounded-lg p-3 max-w-64">
+            {(() => {
+              const node = gameState.discoveredDevices?.find(n => n.ip === selectedNode);
+              if (!node) return null;
+              
+              return (
+                <div className="text-sm">
+                  <div className="text-cyan-400 font-bold mb-2">{node.hostname}</div>
+                  <div className="space-y-1 text-green-400/80">
+                    <div>IP: {node.ip}</div>
+                    <div>Type: {node.type}</div>
+                    <div>OS: {node.os}</div>
+                    <div>Security: <span className={`${
+                      node.security === 'low' ? 'text-yellow-400' :
+                      node.security === 'medium' ? 'text-orange-400' : 'text-red-400'
+                    }`}>{node.security.toUpperCase()}</span></div>
+                    <div>Status: <span className={node.compromised ? 'text-green-400' : 'text-red-400'}>
+                      {node.compromised ? 'COMPROMISED' : 'SECURED'}
+                    </span></div>
+                  </div>
+                  {node.compromised && (
+                    <button
+                      onClick={() => onNodeConnect(node.ip)}
+                      className="mt-2 w-full px-3 py-1 bg-green-400/20 border border-green-400 rounded text-green-400 hover:bg-green-400/30 transition-colors text-xs"
+                    >
+                      Connect
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+
+      {/* Instructions */}
+      <div className="p-2 border-t border-green-400/30 bg-black/50">
+        <div className="text-xs text-green-400/60 text-center">
+          Click nodes to select • Use scan command to discover devices • Compromise nodes to connect
+        </div>
+      </div>
     </div>
   );
 };
+
+export default NetworkMapDual;

@@ -1,103 +1,61 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGameState } from './useGameState';
-import { useToast } from './use-toast';
-import { CounterAttackSystem } from '../utils/CounterAttack';
+import { DefenseSystem } from '../utils/DefenseSystem';
+import { CounterAttackEnhanced } from '../utils/CounterAttackEnhanced';
+import { DefenseResult } from '../types/CoreTypes';
 
-interface CounterAttackContextType {
-  isUnderAttack: boolean;
-  activeAttacks: any[];
-  alertLevel: 'green' | 'yellow' | 'orange' | 'red';
-  riskLevel: number;
-  executeDefense: (command: string) => Promise<void>;
-  trackHackingAttempt: (targetIp: string, success: boolean, toolUsed: string) => void;
-}
+export const useCounterAttackSystem = () => {
+  const { gameState, updateGameState } = useGameState();
+  const [isActive, setIsActive] = useState(false);
+  const [lastAttackTime, setLastAttackTime] = useState(0);
 
-const CounterAttackContext = createContext<CounterAttackContextType | null>(null);
+  const activateDefense = useCallback(async (defenseType: string): Promise<DefenseResult> => {
+    const result = DefenseSystem.activateDefense(defenseType, gameState.currentNode);
+    
+    if (result.success) {
+      setIsActive(true);
+      setLastAttackTime(Date.now());
+      
+      // Update game state with defense activation
+      updateGameState({
+        usedRAM: gameState.usedRAM + (result.ramCost || 0),
+        defenseHistory: [...(gameState.defenseHistory || []), result]
+      });
+    }
+    
+    return result;
+  }, [gameState, updateGameState]);
 
-export const CounterAttackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isUnderAttack, setIsUnderAttack] = useState(false);
-  const [activeAttacks, setActiveAttacks] = useState<any[]>([]);
-  const [alertLevel, setAlertLevel] = useState<'green' | 'yellow' | 'orange' | 'red'>('green');
-  const [riskLevel, setRiskLevel] = useState(0);
-  const [counterAttackSystem] = useState(() => new CounterAttackSystem());
-  
-  const { updateGameState } = useGameState();
-  const { toast } = useToast();
+  const executeCounterAttack = useCallback(async (targetIp: string) => {
+    if (!isActive) return null;
+
+    try {
+      const result = await CounterAttackEnhanced.executeCounterAttack(targetIp, gameState);
+      
+      updateGameState({
+        defenseHistory: [...(gameState.defenseHistory || []), result]
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('[CounterAttack] Error executing counter attack:', error);
+      return null;
+    }
+  }, [isActive, gameState, updateGameState]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIsUnderAttack(counterAttackSystem.isCurrentlyUnderAttack());
-      const attackInfo = counterAttackSystem.getAttackInfo();
-      setActiveAttacks(attackInfo ? [attackInfo] : []);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [counterAttackSystem]);
-
-  const executeDefense = async (command: string) => {
-    try {
-      const result = counterAttackSystem.executeDefense(command);
-      
-      if (result.success) {
-        toast({
-          title: "Defense Activated",
-          description: result.message,
-          duration: 3000,
-        });
-      } else {
-        toast({
-          title: "Defense Failed",
-          description: result.message,
-          variant: "destructive",
-          duration: 3000,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Could not execute defense",
-        variant: "destructive",
-        duration: 3000,
-      });
+    // Auto-deactivate defense after 5 minutes
+    if (isActive && Date.now() - lastAttackTime > 300000) {
+      setIsActive(false);
     }
+  }, [isActive, lastAttackTime]);
+
+  return {
+    isActive,
+    activateDefense,
+    executeCounterAttack,
+    activeDefenses: gameState.activeDefenses || [],
+    defenseHistory: gameState.defenseHistory || []
   };
-
-  const trackHackingAttempt = (targetIp: string, success: boolean, toolUsed: string) => {
-    const counterAttack = counterAttackSystem.initiateCounterAttack('medium', toolUsed);
-    
-    if (counterAttack.type !== 'none') {
-      toast({
-        title: "🚨 COUNTER-ATTACK DETECTED",
-        description: counterAttack.message,
-        variant: "destructive",
-        duration: 5000,
-      });
-      
-      setIsUnderAttack(true);
-    }
-  };
-
-  return (
-    <CounterAttackContext.Provider
-      value={{
-        isUnderAttack,
-        activeAttacks,
-        alertLevel,
-        riskLevel,
-        executeDefense,
-        trackHackingAttempt,
-      }}
-    >
-      {children}
-    </CounterAttackContext.Provider>
-  );
-};
-
-export const useCounterAttack = () => {
-  const context = useContext(CounterAttackContext);
-  if (!context) {
-    throw new Error('useCounterAttack must be used within a CounterAttackProvider');
-  }
-  return context;
 };
